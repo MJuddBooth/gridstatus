@@ -1394,7 +1394,7 @@ class Ercot(ISOBase):
             doc = pd.read_csv(z.open(file))
             # weird that these files dont have this column like all other eroct files
             # add so we can parse
-            doc["DSTFlag"] = "N"
+            # doc["DSTFlag"] = "N"
             data[key] = self.parse_doc(doc)
 
         if process:
@@ -2539,6 +2539,13 @@ class Ercot(ISOBase):
                 # Pandas wants True for DST and False for Standard Time
                 # during ambiguous times
                 ambiguous = doc["DSTFlag"] == "N"
+            elif "HourEnding" in doc.columns:
+                if 25 in doc.HourEnding:
+                    ambiguous = doc["HourEnding"] == 3
+                    doc[:, doc.HourEnding >= 3] -= 1
+
+                doc["HourEnding"] -= 1
+                doc["Interval Start"] = doc["HourEnding"] - 1
 
             try:
                 doc["Interval Start"] = doc["Interval Start"].dt.tz_localize(

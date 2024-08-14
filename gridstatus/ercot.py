@@ -22,6 +22,7 @@ from gridstatus.ercot_60d_utils import (
     process_dam_gen,
     process_dam_load,
     process_dam_load_as_offers,
+    process_dam_gen_as_offers,
     process_sced_gen,
     process_sced_load,
 )
@@ -1410,6 +1411,10 @@ class Ercot(ISOBase):
                 data["dam_load_resource_as_offers"],
             )
 
+            data["dam_gen_resource_as_offers"] = process_dam_gen_as_offers(
+                data["dam_gen_resource_as_offers"],
+            )
+
         return data
 
     def get_sara(
@@ -2540,14 +2545,16 @@ class Ercot(ISOBase):
                 # during ambiguous times
                 ambiguous = doc["DSTFlag"] == "N"
             elif "HourEnding" in doc.columns:
-                if 25 in doc.HourEnding:
+                if 25 in list(doc.HourEnding):
                     ambiguous = doc["HourEnding"] == 3
-                    doc[:, doc.HourEnding >= 3] -= 1
+                    doc.loc[doc.HourEnding >= 3, "HourEnding"] -= 1
 
-                doc["HourEnding"] -= 1
-                doc["Interval Start"] = doc["HourEnding"] - 1
-
+                doc["HourBeginning"] = doc["HourEnding"] - 1
             try:
+                doc["Interval Start"] = (pd.to_datetime(doc["DeliveryDate"])
+                                         + doc["HourBeginning"
+                                               ].astype("timedelta64[h]")
+                                         )
                 doc["Interval Start"] = doc["Interval Start"].dt.tz_localize(
                     self.default_timezone,
                     ambiguous=ambiguous,

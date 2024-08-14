@@ -136,6 +136,29 @@ def extract_curve(df, curve_name):
     return df.apply(combine_mw_price, axis=1)
 
 
+def extract_as_curve(df, product_name):
+    """
+    Extract ancillary curves, which are grouped by quantity and have a
+    different pattern
+    """
+    mw_cols = [x for x in df.columns if x.startswith("QUANTITY MW")]
+    price_cols = [x for x in df.columns if x.endswith(product_name)]
+
+    if len(mw_cols) == 0 or len(price_cols) == 0:
+        return np.nan
+
+    def combine_mw_price(row):
+        return [
+            (mw, price)
+            for mw, price in zip(row[mw_cols], row[price_cols])
+            if pd.notnull(mw) and pd.notnull(price)
+        ]
+
+    # round price columns to 2 decimal places
+    df[price_cols] = df[price_cols].round(2)
+    return df.apply(combine_mw_price, axis=1)
+
+
 def process_dam_gen(df):
     time_cols = [
         "Interval Start",
@@ -244,6 +267,38 @@ def process_dam_load(df):
     return df
 
 
+_AS_COMMON = [
+    "Time",
+    "Interval Start",
+    "Interval End",
+    "QSE",
+    "DME",
+    "Resource Name",
+    "Multi-Hour Block Flag",
+    ]
+
+
+_AS_PRODUCTS = [
+    "RRSPFR",
+    "RRSFFR",
+    "RRSUFR",
+    "ECRS",
+    "OFFEC",
+    "ONLINE NONSPIN",
+    "REGUP",
+    "REGDOWN",
+    "OFFLINE NONSPIN",
+    ]
+
+
+def process_dam_as_curves(df):
+    for product in _AS_PRODUCTS:
+        crv = extract_as_curve(df, product)
+        col_name = f"{product} Offer Curve"
+        df[col_name] = crv
+    return df
+
+
 def process_dam_load_as_offers(df):
     if "QSE" not in df.columns:
         # after Interval End
@@ -261,7 +316,49 @@ def process_dam_load_as_offers(df):
         },
     )
 
+    df = process_dam_as_curves(df)
+
+    keep_columns = _AS_COMMON + [f"{p} Offer Curve" for p in _AS_PRODUCTS]
+    df = df[keep_columns]
+
     return df
+
+
+def process_dam_gen_as_offers(df):
+    if "QSE" not in df.columns:
+        # after Interval End
+        index = df.columns.tolist().index("Interval End") + 1
+        df.insert(index, "QSE", np.nan)
+
+    if "DME" not in df.columns:
+        # after QSE
+        index = df.columns.tolist().index("QSE") + 1
+        df.insert(index, "DME", np.nan)
+
+    df = df.rename(
+        columns={
+            "Generation Resource Name": "Resource Name",
+        },
+    )
+
+    # yuck, multiple rows for the same generator with different
+    # product bids rather than one row with all.
+    grp = df.groupby(["Interval End", "Resource Name"])
+    sum_cols = [c for c in df.columns if "PRICE" in c]
+    # first_cols = set(df.columns).difference(sum_cols)
+
+    rules = {c: "first" for c in df.columns}
+    rules.update({c: "sum" for c in df.columns if c in sum_cols})
+
+    df_fixed = grp.aggregate(rules)
+    df_fixed.reset_index(drop=True, inplace=True)
+
+    df = process_dam_as_curves(df_fixed)
+
+    keep_columns = _AS_COMMON + [f"{p} Offer Curve" for p in _AS_PRODUCTS]
+    df = df[keep_columns]
+
+    return df_fixed
 
 
 def process_sced_gen(df):

@@ -23,6 +23,7 @@ from gridstatus.ercot_60d_utils import (
     process_dam_load,
     process_dam_load_as_offers,
     process_dam_gen_as_offers,
+    process_dam_energy_only,
     process_sced_gen,
     process_sced_load,
 )
@@ -1413,6 +1414,11 @@ class Ercot(ISOBase):
 
             data["dam_gen_resource_as_offers"] = process_dam_gen_as_offers(
                 data["dam_gen_resource_as_offers"],
+            )
+
+            data["dam_energy_bids"] = process_dam_energy_only(
+                data["dam_energy_bids"],
+                "Bid"
             )
 
         return data

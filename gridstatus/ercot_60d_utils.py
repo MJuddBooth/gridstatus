@@ -292,11 +292,31 @@ _AS_PRODUCTS = [
 
 
 def process_dam_as_curves(df):
+    """
+    Handle the special case of
+    """
     for product in _AS_PRODUCTS:
         crv = extract_as_curve(df, product)
         col_name = f"{product} Offer Curve"
         df[col_name] = crv
     return df
+
+
+def depup_as_offers(df):
+    """
+    Offers from a resource can be spread over multiple lines (or at least two)
+    with different products on the different lines even though the format can
+    accomodate all in one line.  Collapse them.
+    """
+
+    grp = df.groupby(["Interval End", "Resource Name"])
+    sum_cols = [c for c in df.columns if "PRICE" in c]
+    # first_cols = set(df.columns).difference(sum_cols)
+    rules = {c: "first" for c in df.columns}
+    rules.update({c: "sum" for c in df.columns if c in sum_cols})
+    df_fixed = grp.aggregate(rules)
+    df_fixed.reset_index(drop=True, inplace=True)
+    return df_fixed
 
 
 def process_dam_load_as_offers(df):
@@ -315,6 +335,8 @@ def process_dam_load_as_offers(df):
             "Load Resource Name": "Resource Name",
         },
     )
+
+    df = depup_as_offers(df)
 
     df = process_dam_as_curves(df)
 
@@ -341,24 +363,30 @@ def process_dam_gen_as_offers(df):
         },
     )
 
-    # yuck, multiple rows for the same generator with different
-    # product bids rather than one row with all.
-    grp = df.groupby(["Interval End", "Resource Name"])
-    sum_cols = [c for c in df.columns if "PRICE" in c]
-    # first_cols = set(df.columns).difference(sum_cols)
-
-    rules = {c: "first" for c in df.columns}
-    rules.update({c: "sum" for c in df.columns if c in sum_cols})
-
-    df_fixed = grp.aggregate(rules)
-    df_fixed.reset_index(drop=True, inplace=True)
+    df_fixed = depup_as_offers(df)
 
     df = process_dam_as_curves(df_fixed)
 
     keep_columns = _AS_COMMON + [f"{p} Offer Curve" for p in _AS_PRODUCTS]
     df = df[keep_columns]
 
-    return df_fixed
+    return df
+
+
+def process_dam_energy_only(df, bid_or_offer="Bid"):
+
+    df = df.rename(columns={"Energy Only Offer ID": "Offer ID",
+                            "Energy Only Bid ID": "Bid ID"})
+
+    curve = f"Energy Only {bid_or_offer} Curve"
+
+    df[curve] = extract_curve(df, f"Energy Only {bid_or_offer}")
+
+    to_drop = [c for c in df.columns if "MW" in c or "Price" in c]
+
+    df = df.drop(to_drop, axis=1)
+
+    return df
 
 
 def process_sced_gen(df):

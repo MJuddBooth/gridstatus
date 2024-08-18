@@ -1221,7 +1221,8 @@ class Ercot(ISOBase):
         return df
 
     @support_date_range("DAY_START")
-    def get_60_day_sced_disclosure(self, date, end=None, process=False, verbose=False):
+    def get_60_day_sced_disclosure(self, date, end=None, process=False, verbose=False,
+                                   process_sced2):
         """Get 60 day SCED Disclosure data
 
         Arguments:
@@ -1247,11 +1248,13 @@ class Ercot(ISOBase):
         )
         z = utils.get_zip_folder(doc_info.url, verbose=verbose)
 
-        data = self._handle_60_day_sced_disclosure(z, process=process, verbose=verbose)
+        data = self._handle_60_day_sced_disclosure(z, process=process, verbose=verbose,
+                                                   process_sced2)
 
         return data
 
-    def _handle_60_day_sced_disclosure(self, z, process=False, verbose=False):
+    def _handle_60_day_sced_disclosure(self, z, process=False, verbose=False,
+                                       process_sced2=False):
         # todo there are other files in the zip folder
         load_resource_file = None
         gen_resource_file = None
@@ -1338,7 +1341,7 @@ class Ercot(ISOBase):
         if process:
             log("Processing 60 day SCED disclosure data", verbose=verbose)
             load_resource = process_sced_load(load_resource)
-            gen_resource = process_sced_gen(gen_resource)
+            gen_resource = process_sced_gen(gen_resource, process_sced2=process_sced2)
             smne = smne.rename(
                 columns={
                     "Resource Code": "Resource Name",
@@ -1377,7 +1380,9 @@ class Ercot(ISOBase):
             "dam_load_resource": "60d_DAM_Load_Resource_Data-",
             "dam_load_resource_as_offers": "60d_DAM_Load_Resource_ASOffers-",  # noqa: E501
             "dam_energy_bids": "60d_DAM_EnergyBids-",
+            "dam_energy_offers": "60d_DAM_EnergyOnlyOffers-",
             "dam_energy_bid_awards": "60d_DAM_EnergyBidAwards-",  # noqa: E501
+            "dam_energy_offer_awards": "60d_DAM_EnergyOnlyOfferAwards-",  # noqa: E501
         }
 
         files = {}
@@ -1419,6 +1424,10 @@ class Ercot(ISOBase):
             data["dam_energy_bids"] = process_dam_energy_only(
                 data["dam_energy_bids"],
                 "Bid"
+            )
+            data["dam_energy_offers"] = process_dam_energy_only(
+                data["dam_energy_offers"],
+                "Offer"
             )
 
         return data

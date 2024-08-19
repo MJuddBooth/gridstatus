@@ -389,7 +389,7 @@ def process_dam_energy_only(df, bid_or_offer="Bid"):
     return df
 
 
-def process_sced_gen(df):
+def process_sced_gen(df, process_sced2=False):
     time_cols = [
         "Interval Start",
         "Interval End",
@@ -429,11 +429,17 @@ def process_sced_gen(df):
     ]
 
     sced1_offer_col = "SCED1 Offer Curve"
-
+    sced2_offer_col = "SCED2 Offer Curve"
+    sced_offer_cols = [sced1_offer_col]
+    
     df[sced1_offer_col] = extract_curve(df, "SCED1 Curve")
+    if process_sced2_curve:
+        df[sced2_offer_col] = extract_curve(df, "SCED2 Curve")
+        sced_offer_cols  += [sced2_offer_col]
+        
     df[tpo_cols[-1]] = extract_curve(df, "Submitted TPO")
 
-    all_cols = resource_cols + telemetry_cols + as_cols + [sced1_offer_col] + tpo_cols
+    all_cols = resource_cols + telemetry_cols + as_cols + sced_offer_cols + tpo_cols
 
     for col in all_cols:
         if col not in df.columns:

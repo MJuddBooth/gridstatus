@@ -1222,7 +1222,7 @@ class Ercot(ISOBase):
 
     @support_date_range("DAY_START")
     def get_60_day_sced_disclosure(self, date, end=None, process=False, verbose=False,
-                                   process_sced2):
+                                   process_sced2=False):
         """Get 60 day SCED Disclosure data
 
         Arguments:
@@ -1249,7 +1249,7 @@ class Ercot(ISOBase):
         z = utils.get_zip_folder(doc_info.url, verbose=verbose)
 
         data = self._handle_60_day_sced_disclosure(z, process=process, verbose=verbose,
-                                                   process_sced2)
+                                                   process_sced2=process_sced2)
 
         return data
 
@@ -1295,16 +1295,22 @@ class Ercot(ISOBase):
 
             else:
                 # for SMNE data
-                df[time_col] = (
-                    df.sort_values("Interval Number", ascending=True)
-                    .groupby("Resource Code")[time_col]
-                    .transform(
-                        lambda x: x.dt.tz_localize(
-                            self.default_timezone,
-                            ambiguous="infer",
-                        ),
-                    )
-                )
+                if 100 in list(df["Interval Number"]):
+                    ambiguous = df["Interval Number"].isin([9, 10, 11, 12])
+                else:
+                    ambiguous = "infer"
+                df[time_col] = df[time_col].dt.tz_localize(self.default_timezone,
+                                                           ambiguous=ambiguous)
+                # df[time_col] = (
+                #     df.sort_values("Interval Number", ascending=True)
+                #     .groupby("Resource Code")[time_col]
+                #     .transform(
+                #         lambda x: x.dt.tz_localize(
+                #             self.default_timezone,
+                #             ambiguous="infer",
+                #         ),
+                #     )
+                # )
 
                 # convert to utc
                 # bc round doesn't work with dst changes

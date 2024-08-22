@@ -118,8 +118,10 @@ def make_storage_resources(data):
 
 
 def extract_curve(df, curve_name):
-    mw_cols = [x for x in df.columns if x.startswith(curve_name + "-MW")]
-    price_cols = [x for x in df.columns if x.startswith(curve_name + "-Price")]
+    mw_cols = [x for x in df.columns if x.startswith((curve_name + "-MW".
+                                                      curve_name + " MW"))]
+    price_cols = [x for x in df.columns if x.startswith((curve_name + "-Price",
+                                                         curve_name + " Price"))]
 
     if len(mw_cols) == 0 or len(price_cols) == 0:
         return np.nan
@@ -431,12 +433,12 @@ def process_sced_gen(df, process_sced2=False):
     sced1_offer_col = "SCED1 Offer Curve"
     sced2_offer_col = "SCED2 Offer Curve"
     sced_offer_cols = [sced1_offer_col]
-    
+
     df[sced1_offer_col] = extract_curve(df, "SCED1 Curve")
     if process_sced2_curve:
         df[sced2_offer_col] = extract_curve(df, "SCED2 Curve")
         sced_offer_cols  += [sced2_offer_col]
-        
+
     df[tpo_cols[-1]] = extract_curve(df, "Submitted TPO")
 
     all_cols = resource_cols + telemetry_cols + as_cols + sced_offer_cols + tpo_cols

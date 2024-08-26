@@ -435,9 +435,9 @@ def process_sced_gen(df, process_sced2=False):
     sced_offer_cols = [sced1_offer_col]
 
     df[sced1_offer_col] = extract_curve(df, "SCED1 Curve")
-    if process_sced2_curve:
+    if process_sced2:
         df[sced2_offer_col] = extract_curve(df, "SCED2 Curve")
-        sced_offer_cols  += [sced2_offer_col]
+        sced_offer_cols += [sced2_offer_col]
 
     df[tpo_cols[-1]] = extract_curve(df, "Submitted TPO")
 

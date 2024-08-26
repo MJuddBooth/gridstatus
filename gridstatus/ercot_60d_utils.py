@@ -118,7 +118,7 @@ def make_storage_resources(data):
 
 
 def extract_curve(df, curve_name):
-    mw_cols = [x for x in df.columns if x.startswith((curve_name + "-MW".
+    mw_cols = [x for x in df.columns if x.startswith((curve_name + "-MW",
                                                       curve_name + " MW"))]
     price_cols = [x for x in df.columns if x.startswith((curve_name + "-Price",
                                                          curve_name + " Price"))]

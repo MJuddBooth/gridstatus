@@ -304,7 +304,7 @@ def process_dam_as_curves(df):
     return df
 
 
-def depup_as_offers(df):
+def dedup_as_offers(df):
     """
     Offers from a resource can be spread over multiple lines (or at least two)
     with different products on the different lines even though the format can
@@ -338,7 +338,7 @@ def process_dam_load_as_offers(df):
         },
     )
 
-    df = depup_as_offers(df)
+    df = dedup_as_offers(df)
 
     df = process_dam_as_curves(df)
 
@@ -365,7 +365,7 @@ def process_dam_gen_as_offers(df):
         },
     )
 
-    df_fixed = depup_as_offers(df)
+    df_fixed = dedup_as_offers(df)
 
     df = process_dam_as_curves(df_fixed)
 
